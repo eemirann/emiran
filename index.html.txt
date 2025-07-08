@@ -1,0 +1,23 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Emiran'ın Web CV'si</title>
+  <style>
+    body { font-family: Arial; max-width: 600px; margin: auto; padding: 20px; }
+    h1 { color: darkblue; }
+    .btn { background: green; color: white; padding: 10px; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>Merhaba, ben Emiran 👋</h1>
+  <p>YBS öğrencisiyim. Teknoloji ve iş dünyasını birleştiren projeler üretmeyi hedefliyorum.</p>
+  <h3>📚 Eğitim</h3>
+  <p>Kıbrıs, YBS — Mezuniyet: 2027</p>
+  <h3>🎯 Hedef</h3>
+  <p>Freelance projelerle tecrübe kazanmak ve yazılım dünyasında yer almak.</p>
+  <h3>📬 İletişim</h3>
+  <a class="btn" href="mailto:seninmailin@gmail.com">Mail Gönder</a>
+</body>
+</html>
