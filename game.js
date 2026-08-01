@@ -12,6 +12,7 @@ const SKINS = [
   { img: 'assets/skins/skin3.jpg', color: '#9b59b6' },
   { img: 'assets/skins/skin4.jpg', color: '#2c3e50' },
   { img: 'assets/skins/skin5.jpg', color: '#27ae60' },
+  { img: 'assets/skins/skin6.jpg', color: '#c0392b' },
   { emoji: '🔴', color: '#e74c3c' },
   { emoji: '🟡', color: '#f1c40f' },
   { emoji: '🟢', color: '#2ecc71' },
