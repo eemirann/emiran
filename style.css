@@ -1,0 +1,131 @@
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; overflow:hidden; background:#0b0e1a; color:#eee;
+  font-family:-apple-system,'Segoe UI',Roboto,sans-serif; touch-action:none; }
+
+.screen { position:fixed; inset:0; display:none; flex-direction:column; align-items:center;
+  justify-content:center; gap:14px; padding:20px; padding-top:max(20px, env(safe-area-inset-top)); }
+.screen.active { display:flex; }
+
+.logo { font-size:2.6em; letter-spacing:4px; color:#ff4757; text-shadow:0 0 24px #ff475766; text-align:center; }
+.logo span { display:block; font-size:0.35em; letter-spacing:8px; color:#7bed9f; }
+
+.card { background:#151a2e; border-radius:16px; padding:22px; width:min(92vw,380px);
+  display:flex; flex-direction:column; gap:12px; box-shadow:0 8px 40px #0009; }
+
+input { background:#0b0e1a; border:2px solid #2f3652; color:#fff; border-radius:10px;
+  padding:12px 14px; font-size:16px; width:100%; outline:none; }
+input:focus { border-color:#ff4757; }
+#inp-code { text-transform:uppercase; letter-spacing:6px; text-align:center; font-weight:bold; }
+
+.btn { background:#2f3652; color:#fff; border:none; border-radius:10px; padding:13px 18px;
+  font-size:16px; font-weight:600; cursor:pointer; }
+.btn:active { transform:scale(0.96); }
+.btn.primary { background:#ff4757; }
+.btn.danger { background:#57202a; color:#ff8a95; }
+.btn.small { padding:8px 14px; font-size:14px; }
+.btn-row { display:flex; gap:10px; }
+.btn-row .btn { flex:1; }
+.join-row input { flex:1; width:auto; }
+
+.skin-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.skin-opt { width:52px; height:52px; border-radius:50%; border:3px solid #2f3652;
+  overflow:hidden; cursor:pointer; background-size:cover; background-position:center;
+  display:flex; align-items:center; justify-content:center; font-size:22px; }
+.skin-opt.sel { border-color:#7bed9f; box-shadow:0 0 12px #7bed9f88; }
+
+.status { color:#8a92b8; font-size:14px; text-align:center; min-height:18px; }
+.hint { color:#555d80; font-size:13px; text-align:center; }
+
+.room-code { font-size:1.2em; background:#151a2e; padding:12px 22px; border-radius:12px; }
+.room-code b { color:#7bed9f; letter-spacing:5px; font-size:1.4em; }
+.lobby-players { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; max-width:420px; }
+.lobby-p { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:13px; }
+.lobby-p .av { width:56px; height:56px; border-radius:50%; background-size:cover; background-position:center;
+  border:3px solid #2f3652; display:flex; align-items:center; justify-content:center; font-size:24px; }
+.lobby-p.host .av { border-color:#ffa502; }
+
+/* OYUN */
+#screen-game { padding:0; }
+#game-canvas { position:absolute; inset:0; width:100%; height:100%; }
+#hud { position:absolute; inset:0; pointer-events:none; }
+#hud > * { pointer-events:auto; }
+
+#taskbar-wrap { position:absolute; top:max(10px, env(safe-area-inset-top)); left:10px; width:44vw; max-width:260px; }
+#taskbar-wrap span { font-size:10px; color:#8a92b8; letter-spacing:2px; }
+#taskbar { height:14px; background:#151a2ecc; border-radius:7px; overflow:hidden; border:1px solid #2f3652; }
+#taskbar::after { content:''; display:block; height:100%; width:var(--p,0%); background:linear-gradient(90deg,#2ed573,#7bed9f); transition:width .4s; }
+
+#role-banner { position:absolute; top:max(10px, env(safe-area-inset-top)); right:10px; background:#151a2ecc;
+  padding:6px 12px; border-radius:10px; font-weight:700; font-size:14px; }
+#task-list { position:absolute; top:60px; left:10px; background:#151a2eb0; border-radius:10px;
+  padding:8px 10px; font-size:12px; max-width:60vw; line-height:1.7; }
+#task-list .done { color:#2ed573; text-decoration:line-through; }
+#sab-banner { position:absolute; top:60px; right:10px; color:#ff4757; font-weight:800;
+  font-size:15px; text-align:right; text-shadow:0 0 10px #ff4757; animation:blink 1s infinite; }
+@keyframes blink { 50% { opacity:0.4; } }
+
+#joystick { position:absolute; bottom:max(26px, env(safe-area-inset-bottom)); left:26px; width:120px; height:120px;
+  border-radius:50%; background:#ffffff12; border:2px solid #ffffff2a; }
+#stick { position:absolute; left:38px; top:38px; width:44px; height:44px; border-radius:50%;
+  background:#ffffff55; }
+
+#action-btns { position:absolute; bottom:max(22px, env(safe-area-inset-bottom)); right:16px; display:flex;
+  flex-wrap:wrap-reverse; gap:10px; justify-content:flex-end; max-width:180px; }
+.act { width:74px; height:74px; border-radius:50%; border:none; font-size:26px;
+  background:#151a2ed9; color:#fff; display:none; flex-direction:column; align-items:center;
+  justify-content:center; box-shadow:0 4px 16px #0008; }
+.act span { font-size:9px; font-weight:800; letter-spacing:1px; }
+.act.show { display:flex; }
+.act:disabled { opacity:0.35; }
+.act.red { background:#7a1f2bd9; }
+.act.green { background:#1f7a3dd9; }
+.act.orange { background:#7a5a1fd9; }
+.act:active { transform:scale(0.92); }
+
+.modal { position:fixed; inset:0; background:#000a; display:flex; align-items:center;
+  justify-content:center; z-index:50; }
+.modal.hidden { display:none; }
+.modal-box { background:#151a2e; border-radius:16px; padding:20px; width:min(92vw,400px);
+  display:flex; flex-direction:column; gap:10px; align-items:center; }
+.modal-box h3 { color:#ff4757; }
+
+/* TOPLANTI */
+#screen-meeting { background:#101528; justify-content:flex-start; padding-top:max(16px, env(safe-area-inset-top)); gap:8px; }
+#meeting-title { color:#ffa502; }
+#meeting-timer { font-size:15px; color:#8a92b8; font-weight:700; }
+#meeting-players { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:500px; }
+.vote-card { background:#151a2e; border:2px solid #2f3652; border-radius:12px; padding:8px 10px;
+  display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; min-width:140px; }
+.vote-card .av { width:36px; height:36px; border-radius:50%; background-size:cover; background-position:center;
+  display:flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+.vote-card.dead { opacity:0.35; filter:grayscale(1); }
+.vote-card.voted-me { border-color:#ff4757; }
+.vote-card .tally { margin-left:auto; color:#ffa502; font-weight:800; }
+.vote-card.skip { justify-content:center; color:#8a92b8; }
+#chat-box { flex:1; width:min(94vw,500px); background:#0b0e1a; border-radius:12px; padding:10px;
+  overflow-y:auto; font-size:14px; line-height:1.6; min-height:100px; }
+#chat-box .gh { color:#8a92b8; font-style:italic; }
+#chat-box b { color:#7bed9f; }
+.chat-input-row { display:flex; gap:8px; width:min(94vw,500px); padding-bottom:max(8px, env(safe-area-inset-bottom)); }
+.chat-input-row input { flex:1; }
+
+/* SONUÇ */
+#result-text { font-size:2em; font-weight:900; text-align:center; line-height:1.5; }
+#result-text .sub { font-size:0.5em; font-weight:400; color:#8a92b8; display:block; margin-top:10px; }
+
+/* Görev mini oyunları */
+.wire-area { display:flex; justify-content:space-between; width:100%; min-height:220px; position:relative; }
+.wire-col { display:flex; flex-direction:column; gap:18px; }
+.wire-node { width:44px; height:44px; border-radius:8px; border:3px solid #fff3; cursor:pointer; }
+.wire-node.sel { border-color:#fff; box-shadow:0 0 10px #fff; }
+.wire-node.done { opacity:0.4; }
+.wire-svg { position:absolute; inset:0; pointer-events:none; }
+.hold-btn { width:120px; height:120px; border-radius:50%; font-size:40px; border:none;
+  background:#ff4757; color:#fff; }
+.prog { width:100%; height:16px; background:#0b0e1a; border-radius:8px; overflow:hidden; }
+.prog i { display:block; height:100%; background:#2ed573; width:0%; }
+.keypad { display:grid; grid-template-columns:repeat(3,64px); gap:8px; }
+.keypad button { height:52px; font-size:20px; border-radius:10px; border:none; background:#2f3652; color:#fff; }
+.code-disp { font-size:26px; letter-spacing:8px; font-weight:800; color:#7bed9f; min-height:34px; }
+.ast-area { width:100%; height:260px; background:#05070f; border-radius:10px; position:relative; overflow:hidden; }
+.ast { position:absolute; width:44px; height:44px; font-size:32px; line-height:44px; text-align:center; cursor:pointer; }

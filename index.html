@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Aramızda — Emiran Edition</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ANA MENÜ -->
+<div id="screen-home" class="screen active">
+  <h1 class="logo">ARAMIZDA<span>Emiran Edition</span></h1>
+  <div class="card">
+    <input id="inp-name" maxlength="12" placeholder="Adın (örn. Emiran)">
+    <div class="skin-row" id="skin-row"></div>
+    <div class="btn-row">
+      <button id="btn-create" class="btn primary">Oda Kur</button>
+    </div>
+    <div class="btn-row join-row">
+      <input id="inp-code" maxlength="5" placeholder="KOD">
+      <button id="btn-join" class="btn">Katıl</button>
+    </div>
+    <p id="home-status" class="status"></p>
+  </div>
+  <p class="hint">Telefonundan oyna • Arkadaşlarına linki + oda kodunu at</p>
+</div>
+
+<!-- LOBİ -->
+<div id="screen-lobby" class="screen">
+  <h2>Lobi</h2>
+  <div class="room-code">ODA KODU: <b id="lobby-code">-----</b></div>
+  <button id="btn-share" class="btn small">📤 Davet Linkini Kopyala</button>
+  <div id="lobby-players" class="lobby-players"></div>
+  <p id="lobby-info" class="status">En az 4 kişiyle başlar. 7+ kişide 2 impostor.</p>
+  <button id="btn-start" class="btn primary" style="display:none">🚀 Oyunu Başlat</button>
+  <button id="btn-leave" class="btn danger small">Ayrıl</button>
+</div>
+
+<!-- OYUN -->
+<div id="screen-game" class="screen">
+  <canvas id="game-canvas"></canvas>
+  <div id="hud">
+    <div id="taskbar-wrap"><div id="taskbar"></div><span>GÖREVLER</span></div>
+    <div id="role-banner"></div>
+    <div id="task-list"></div>
+    <div id="sab-banner"></div>
+    <div id="joystick"><div id="stick"></div></div>
+    <div id="action-btns">
+      <button id="btn-use" class="act">🔧<span>KULLAN</span></button>
+      <button id="btn-report" class="act">📢<span>RAPOR</span></button>
+      <button id="btn-kill" class="act red">🔪<span>ÖLDÜR</span></button>
+      <button id="btn-vent" class="act red">🕳️<span>VENT</span></button>
+      <button id="btn-sabotage" class="act red">💥<span>SABOTAJ</span></button>
+      <button id="btn-revive" class="act green">💉<span>DİRİLT</span></button>
+      <button id="btn-shoot" class="act orange">🔫<span>VUR</span></button>
+    </div>
+  </div>
+  <div id="sabotage-menu" class="modal hidden">
+    <div class="modal-box">
+      <h3>Sabotaj</h3>
+      <button class="btn" id="sab-lights">💡 Işıkları Kapat</button>
+      <button class="btn" id="sab-reactor">☢️ Reaktör Krizi</button>
+      <button class="btn small" id="sab-close">Vazgeç</button>
+    </div>
+  </div>
+  <div id="task-modal" class="modal hidden"><div class="modal-box" id="task-box"></div></div>
+</div>
+
+<!-- TOPLANTI -->
+<div id="screen-meeting" class="screen">
+  <h2 id="meeting-title">ACİL TOPLANTI</h2>
+  <div id="meeting-timer"></div>
+  <div id="meeting-players"></div>
+  <div id="chat-box"></div>
+  <div class="chat-input-row">
+    <input id="chat-input" maxlength="80" placeholder="Mesaj yaz...">
+    <button id="chat-send" class="btn small">Gönder</button>
+  </div>
+</div>
+
+<!-- SONUÇ / EJECT -->
+<div id="screen-result" class="screen">
+  <div id="result-text"></div>
+  <button id="btn-back-lobby" class="btn primary" style="display:none">Lobiye Dön</button>
+</div>
+
+<script src="lib/peerjs.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
