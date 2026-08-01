@@ -282,18 +282,27 @@ let killCd = 0, sabCd = 0, meetState = null, taskBarVal = 0;
 let sheriffUsed = false, reviveUsed = false, joy = { dx: 0, dy: 0 };
 let cam = { x: SPAWN.x, y: SPAWN.y }, lastT = 0, openTask = null;
 
-// PeerJS/WebRTC ayarı: STUN + ücretsiz TURN aktarıcıları.
+// PeerJS/WebRTC ayarı: STUN + TURN aktarıcıları.
 // TURN olmadan farklı mobil operatörlerdeki telefonlar (CGNAT) birbirine bağlanamaz.
+const STUN_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+];
+// Birden fazla sağlayıcı: biri kapanırsa diğeri devreye girer.
+// KENDİ TURN BİLGİN VARSA: aşağıya ekle, en üste koy.
+const TURN_SERVERS = [
+  { label: 'FreeTURN 3478',   urls: 'turn:freeturn.net:3478',                    username: 'free', credential: 'free' },
+  { label: 'FreeTURN TCP',    urls: 'turn:freeturn.net:3478?transport=tcp',      username: 'free', credential: 'free' },
+  { label: 'FreeTURN TLS',    urls: 'turns:freeturn.tel:5349',                   username: 'free', credential: 'free' },
+  { label: 'OpenRelay 80',    urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
+  { label: 'OpenRelay 443',   urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+  { label: 'OpenRelay TCP',   urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  { label: 'AnyFirewall TCP', urls: 'turn:turn.anyfirewall.com:443?transport=tcp', username: 'webrtc', credential: 'webrtc' },
+];
 const PEER_CFG = {
   config: {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478' },
-      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-    ],
+    iceServers: STUN_SERVERS.concat(TURN_SERVERS.map(t => ({ urls: t.urls, username: t.username, credential: t.credential }))),
     sdpSemantics: 'unified-plan',
   },
 };
@@ -1465,7 +1474,7 @@ async function runDiagnostics() {
 
   // 1) Sayfa & güvenli bağlantı
   const secure = location.protocol === 'https:' || location.hostname === 'localhost';
-  diagRow(secure ? '✅' : '❌', 'Sayfa (sürüm v4)',
+  diagRow(secure ? '✅' : '❌', 'Sayfa (sürüm v5)',
     secure ? location.host || 'yerel dosya' : 'https değil! WebRTC çalışmaz — adresi https ile aç');
   results.secure = secure;
 
@@ -1490,16 +1499,24 @@ async function runDiagnostics() {
 
   // 5) STUN
   row = diagRow('⏳', 'STUN (adres bulma)', 'test ediliyor...');
-  const stunOk = await iceTest(PEER_CFG.config.iceServers.filter(s => String(s.urls).startsWith('stun')), 'srflx', 9000);
+  const stunOk = await iceTest(STUN_SERVERS, 'srflx', 9000);
   results.stun = stunOk;
   updRow(row, stunOk ? '✅' : '⚠️', 'STUN (adres bulma)', stunOk ? 'çalışıyor' : 'engelli');
 
-  // 6) TURN
-  row = diagRow('⏳', 'TURN (aktarıcı)', 'test ediliyor...');
-  const turnOk = await iceTest(PEER_CFG.config.iceServers.filter(s => String(s.urls).startsWith('turn')), 'relay', 12000);
-  results.turn = turnOk;
-  updRow(row, turnOk ? '✅' : '⚠️', 'TURN (aktarıcı)',
-    turnOk ? 'çalışıyor' : 'ulaşılamıyor — mobil veride bağlantı kurulamayabilir');
+  // 6) TURN — sunucular paralel denenir, hangisinin yaşadığını görelim
+  const turnOkList = [];
+  const turnRows = TURN_SERVERS.map(t => ({ t, row: diagRow('⏳', 'TURN: ' + t.label, 'deneniyor...') }));
+  await Promise.all(turnRows.map(async ({ t, row: rw }) => {
+    const ok = await iceTest([{ urls: t.urls, username: t.username, credential: t.credential }], 'relay', 10000);
+    if (ok) turnOkList.push(t.label);
+    // satırı doğrudan güncelle (paralel olduğu için updRow'un sıra varsayımı geçerli değil)
+    rw.querySelector('.ic').textContent = ok ? '✅' : '❌';
+    rw.querySelector('.tx').innerHTML = `<b>TURN: ${esc(t.label)}</b><span>${ok ? 'ÇALIŞIYOR' : 'ulaşılamıyor'}</span>`;
+  }));
+  diagLines.splice(diagLines.length - TURN_SERVERS.length, TURN_SERVERS.length,
+    ...TURN_SERVERS.map(t => `${turnOkList.includes(t.label) ? '✅' : '❌'} TURN: ${t.label}`));
+  results.turn = turnOkList.length > 0;
+  results.turnList = turnOkList;
 
   // 7) Uçtan uca
   row = diagRow('⏳', 'Uçtan uca oda testi', 'iki oyuncu simüle ediliyor...');
@@ -1516,7 +1533,8 @@ function finishDiag(r) {
   if (!r.secure) v = '❌ Sayfa https ile açılmamış. Adres çubuğunda <b>https://</b> olduğundan emin ol.';
   else if (!r.rtc || !r.lib) v = '❌ Tarayıcı sorunu. Chrome veya Safari ile, gizli olmayan normal sekmede aç.';
   else if (!r.signal) v = '❌ <b>Bağlantı sunucusuna ulaşılamıyor.</b> Sebep ya internetin/operatörün bunu engelliyor ya da sunucu geçici olarak kapalı. Farklı bir ağ dene (mobil veri ↔ wifi) ve birkaç dakika sonra tekrar dene.';
-  else if (r.loop) v = '✅ <b>Her şey çalışıyor!</b> Oda kurup arkadaşını davet edebilirsin. Hâlâ giremiyorsan: kodu büyük harfle gir ve oda kuran kişinin sayfası açık kalsın.';
+  else if (r.loop && r.turn) v = `✅ <b>Her şey çalışıyor!</b> Aktarıcı da aktif (${r.turnList.join(', ')}), farklı internetlerden oynayabilirsiniz.`;
+  else if (r.loop && !r.turn) v = '⚠️ <b>Oyun çalışıyor ama aktarıcı (TURN) yok.</b><br>• <b>Aynı wifi\'daysanız sorunsuz oynarsınız</b> — hemen deneyin.<br>• Farklı mobil verilerde bağlantı kurulamayabilir. Kalıcı çözüm için ücretsiz bir TURN hesabı gerekiyor.';
   else if (!r.turn) v = '⚠️ Sunucuya ulaşılıyor ama <b>aktarıcı (TURN) engelli</b>. Aynı wifi\'daki cihazlar bağlanır, farklı mobil verilerde bağlanamayabilir. Herkesi aynı wifi\'ya alıp dene.';
   else v = '⚠️ Sunucu ve aktarıcı çalışıyor ama <b>uçtan uca test başarısız</b>. Sayfayı yenileyip tekrar dene; sürerse ağın WebRTC veri kanallarını engelliyor olabilir.';
   $('diag-verdict').innerHTML = v;
