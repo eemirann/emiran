@@ -85,60 +85,73 @@ const TASK_POOL = [
   { id: 14, x: 1240, y: 860,  type: 'download', label: 'Revir: Tarama Gönder' },
 ];
 
-// ---------- HARİTA ÖN-RENDER ----------
+// ---------- HARİTA ÖN-RENDER (PİKSEL ART) ----------
 const MAPW = 3200, MAPH = 1960;
+const PS = 4; // piksel boyutu: harita 1/4 çözünürlükte çizilip keskin büyütülür
 const mapCanvas = document.createElement('canvas');
 function rr(c, x, y, w, h, r) { // uyumlu roundRect
   c.beginPath();
   if (c.roundRect) c.roundRect(x, y, w, h, r);
   else c.rect(x, y, w, h);
 }
+// oda vurgu renkleri (canlı palet)
+const ROOM_ACCENT = {
+  'Kafeterya': '#ffd166', 'Silah': '#ff6b81', 'Navigasyon': '#74b9ff',
+  'Reaktör': '#6bffa0', 'Güvenlik': '#ff7675', 'Revir': '#7de8ff',
+  'Yönetim': '#74d1ff', 'O2': '#55efc4', 'Üst Motor': '#fab1a0',
+  'Alt Motor': '#fab1a0', 'Elektrik': '#ffe45c', 'Depo': '#fdcb6e',
+  'Kalkanlar': '#81ecec', 'İletişim': '#a29bfe',
+};
 function prerenderMap() {
-  mapCanvas.width = MAPW; mapCanvas.height = MAPH;
-  const c = mapCanvas.getContext('2d');
+  // düşük çözünürlüklü tuvale çiz
+  const lo = document.createElement('canvas');
+  lo.width = MAPW / PS; lo.height = MAPH / PS;
+  const c = lo.getContext('2d');
+  c.scale(1 / PS, 1 / PS); // dünya koordinatlarıyla çizmeye devam
 
   // uzay + yıldızlar
   const bg = c.createLinearGradient(0, 0, 0, MAPH);
-  bg.addColorStop(0, '#070a18'); bg.addColorStop(1, '#04060d');
+  bg.addColorStop(0, '#140a33'); bg.addColorStop(0.6, '#0b0a26'); bg.addColorStop(1, '#060414');
   c.fillStyle = bg; c.fillRect(0, 0, MAPW, MAPH);
-  for (let i = 0; i < 700; i++) {
-    const x = Math.random() * MAPW, y = Math.random() * MAPH, r = Math.random() * 1.6 + 0.3;
-    c.globalAlpha = Math.random() * 0.7 + 0.15;
-    c.fillStyle = ['#ffffff', '#aac6ff', '#ffd9a0'][i % 3];
-    c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+  for (let i = 0; i < 500; i++) {
+    const x = Math.random() * MAPW, y = Math.random() * MAPH, r = (Math.random() < 0.15 ? 2 : 1) * PS;
+    c.globalAlpha = Math.random() * 0.8 + 0.2;
+    c.fillStyle = ['#ffffff', '#7de8ff', '#ffd166', '#ff9de2'][i % 4];
+    c.fillRect(x, y, r, r);
   }
   c.globalAlpha = 1;
 
   // gemi dış gövdesi (koridor+odaların genişletilmiş silueti)
-  FLOORS.forEach(f => { c.fillStyle = '#39415f'; rr(c, f.x - 22, f.y - 22, f.w + 44, f.h + 44, 30); c.fill(); });
-  FLOORS.forEach(f => { c.fillStyle = '#12162b'; rr(c, f.x - 10, f.y - 10, f.w + 20, f.h + 20, 20); c.fill(); });
+  FLOORS.forEach(f => { c.fillStyle = '#8be0ff'; c.fillRect(f.x - 28, f.y - 28, f.w + 56, f.h + 56); });
+  FLOORS.forEach(f => { c.fillStyle = '#46538c'; c.fillRect(f.x - 20, f.y - 20, f.w + 40, f.h + 40); });
+  FLOORS.forEach(f => { c.fillStyle = '#141833'; c.fillRect(f.x - 8, f.y - 8, f.w + 16, f.h + 16); });
 
-  // zemin + ızgara dokusu
+  // zemin + piksel karo dokusu
   c.save();
   c.beginPath();
-  FLOORS.forEach(f => { rr(c, f.x, f.y, f.w, f.h, 12); });
+  FLOORS.forEach(f => { c.rect(f.x, f.y, f.w, f.h); });
   c.clip();
-  const fg = c.createLinearGradient(0, 0, 0, MAPH);
-  fg.addColorStop(0, '#242c4e'); fg.addColorStop(1, '#1b2140');
-  c.fillStyle = fg; c.fillRect(0, 0, MAPW, MAPH);
-  c.strokeStyle = 'rgba(255,255,255,0.045)'; c.lineWidth = 1;
-  for (let x = 0; x < MAPW; x += 56) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, MAPH); c.stroke(); }
-  for (let y = 0; y < MAPH; y += 56) { c.beginPath(); c.moveTo(0, y); c.lineTo(MAPW, y); c.stroke(); }
-  // koridorlara hafif gölge
-  HALLS.forEach(f => { c.fillStyle = 'rgba(0,0,0,0.14)'; c.fillRect(f.x, f.y, f.w, f.h); });
+  c.fillStyle = '#2e4a80'; c.fillRect(0, 0, MAPW, MAPH);
+  // dama deseni karolar
+  const T = 56;
+  for (let ty = 0; ty < MAPH / T; ty++)
+    for (let tx = 0; tx < MAPW / T; tx++)
+      if ((tx + ty) % 2) { c.fillStyle = 'rgba(255,255,255,0.05)'; c.fillRect(tx * T, ty * T, T, T); }
+  c.strokeStyle = 'rgba(10,14,40,0.5)'; c.lineWidth = PS;
+  for (let x = 0; x <= MAPW; x += T) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, MAPH); c.stroke(); }
+  for (let y = 0; y <= MAPH; y += T) { c.beginPath(); c.moveTo(0, y); c.lineTo(MAPW, y); c.stroke(); }
+  // koridorlar biraz koyu
+  HALLS.forEach(f => { c.fillStyle = 'rgba(5,8,30,0.25)'; c.fillRect(f.x, f.y, f.w, f.h); });
   c.restore();
 
-  // oda kenarlıkları + isim şeridi
+  // oda kenarlıkları (canlı vurgu renkleri)
   ROOMS.forEach(f => {
-    c.strokeStyle = '#4a5480'; c.lineWidth = 5;
-    rr(c, f.x + 2, f.y + 2, f.w - 4, f.h - 4, 12); c.stroke();
-    c.strokeStyle = 'rgba(123,237,159,0.12)'; c.lineWidth = 1.5;
-    rr(c, f.x + 9, f.y + 9, f.w - 18, f.h - 18, 8); c.stroke();
-    const grd = c.createLinearGradient(f.x, f.y, f.x, f.y + 46);
-    grd.addColorStop(0, 'rgba(74,84,128,0.55)'); grd.addColorStop(1, 'rgba(74,84,128,0)');
-    c.fillStyle = grd; c.fillRect(f.x + 4, f.y + 4, f.w - 8, 46);
-    c.fillStyle = '#98a4d4'; c.font = 'bold 26px sans-serif'; c.textAlign = 'center';
-    c.fillText(f.name.toUpperCase(), f.x + f.w / 2, f.y + 36);
+    const acc = ROOM_ACCENT[f.name] || '#98a4d4';
+    c.strokeStyle = acc; c.globalAlpha = 0.75; c.lineWidth = PS * 1.5;
+    c.strokeRect(f.x + 3, f.y + 3, f.w - 6, f.h - 6);
+    c.globalAlpha = 0.2; c.fillStyle = acc;
+    c.fillRect(f.x + 6, f.y + 6, f.w - 12, 40);
+    c.globalAlpha = 1;
   });
 
   // ---- oda dekorları ----
@@ -221,10 +234,28 @@ function prerenderMap() {
   // ventler
   VENTS.forEach(v => {
     c.fillStyle = '#0c1023';
-    c.beginPath(); c.ellipse(v.x, v.y, 32, 22, 0, 0, 7); c.fill();
-    c.strokeStyle = '#4a5480'; c.lineWidth = 4; c.stroke();
-    c.strokeStyle = '#39415f'; c.lineWidth = 3;
-    for (let i = -1; i <= 1; i++) { c.beginPath(); c.moveTo(v.x - 20, v.y + i * 9); c.lineTo(v.x + 20, v.y + i * 9); c.stroke(); }
+    c.fillRect(v.x - 32, v.y - 20, 64, 40);
+    c.strokeStyle = '#6b7ab0'; c.lineWidth = PS; c.strokeRect(v.x - 32, v.y - 20, 64, 40);
+    c.strokeStyle = '#39415f'; c.lineWidth = PS;
+    for (let i = -1; i <= 1; i++) { c.beginPath(); c.moveTo(v.x - 22, v.y + i * 10); c.lineTo(v.x + 22, v.y + i * 10); c.stroke(); }
+  });
+
+  // düşük çözünürlüğü keskin piksellerle tam boyuta büyüt
+  mapCanvas.width = MAPW; mapCanvas.height = MAPH;
+  const mc = mapCanvas.getContext('2d');
+  mc.imageSmoothingEnabled = false;
+  mc.drawImage(lo, 0, 0, MAPW, MAPH);
+
+  // oda isimleri (okunur, retro monospace)
+  mc.font = 'bold 26px "Courier New", monospace';
+  mc.textAlign = 'center';
+  ROOMS.forEach(f => {
+    const acc = ROOM_ACCENT[f.name] || '#98a4d4';
+    const label = f.name.toUpperCase();
+    mc.lineWidth = 6; mc.strokeStyle = '#0a0e28';
+    mc.strokeText(label, f.x + f.w / 2, f.y + 36);
+    mc.fillStyle = acc;
+    mc.fillText(label, f.x + f.w / 2, f.y + 36);
   });
 }
 prerenderMap();
@@ -451,7 +482,9 @@ $('btn-start').onclick = () => {
 
 function startGameLocal(role, imps, taskIds, ps) {
   phase = 'play';
-  myRole = role; impostorIds = imps; sheriffUsed = false; reviveUsed = false;
+  myRole = role;
+  if (!isHost) impostorIds = imps; // host'un otoriter listesi btn-start'ta dolu, ezme!
+  sheriffUsed = false; reviveUsed = false;
   killCd = CFG.killCooldown / 2; sabCd = 10; taskBarVal = 0; bodies = [];
   sab = { lights: false, reactor: false, reactorT: 0 };
   if (!isHost) {
@@ -868,16 +901,22 @@ function draw() {
   ctx.setTransform(s, 0, 0, s, W / 2 - cam.x * s, H / 2 - cam.y * s);
 
   // önceden çizilmiş harita (yıldızlar + gemi + dekor)
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(mapCanvas, 0, 0);
 
-  // acil buton (nabız efekti)
+  // acil buton (piksel stili, nabız efekti)
   const pulse = 1 + Math.sin(Date.now() / 300) * 0.08;
-  ctx.fillStyle = '#8b1e28';
-  ctx.beginPath(); ctx.arc(EMERGENCY_BTN.x, EMERGENCY_BTN.y, 30 * pulse, 0, 7); ctx.fill();
+  ctx.save();
+  ctx.translate(EMERGENCY_BTN.x, EMERGENCY_BTN.y);
+  ctx.scale(pulse, pulse);
+  ctx.fillStyle = '#7a1420';
+  ctx.fillRect(-28, -16, 56, 32); ctx.fillRect(-16, -28, 32, 56);
   ctx.fillStyle = '#ff4757';
-  ctx.beginPath(); ctx.arc(EMERGENCY_BTN.x, EMERGENCY_BTN.y, 19 * pulse, 0, 7); ctx.fill();
-  ctx.fillStyle = '#ffb3ba'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('ACİL', EMERGENCY_BTN.x, EMERGENCY_BTN.y + 6);
+  ctx.fillRect(-20, -8, 40, 16); ctx.fillRect(-8, -20, 16, 40);
+  ctx.fillStyle = '#ffe1e4';
+  ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('ACİL', 0, 5);
+  ctx.restore();
 
   // görev noktaları
   const me = players[myId];
@@ -896,11 +935,9 @@ function draw() {
   // cesetler
   bodies.forEach(b => {
     const p = players[b.pid];
-    const col = p ? SKINS[p.skin].color : '#999';
-    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(1.2);
-    drawBean(0, 0, col, null, 0.9);
-    ctx.restore();
-    ctx.fillStyle = '#ff4757'; ctx.font = 'bold 22px sans-serif'; ctx.fillText('💀', b.x, b.y - 40);
+    drawBean(b.x, b.y, p ? p.skin : 0, 1.35, 0.9);
+    ctx.font = 'bold 24px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('💀', b.x, b.y - 40);
   });
 
   // oyuncular
@@ -909,7 +946,7 @@ function draw() {
     if (p.dead && !meDead && p.id !== myId) return;   // hayaletleri sadece ölüler görür
     if (p.inVent && p.id !== myId) return;
     ctx.globalAlpha = p.dead ? 0.45 : 1;
-    drawBean(p.x, p.y, SKINS[p.skin].color, skinImgs[p.skin], 1, SKINS[p.skin].emoji);
+    drawBean(p.x, p.y, p.skin);
     ctx.globalAlpha = 1;
     ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
     const label = p.name + (p.id === myId ? ' (sen)' : '');
@@ -937,35 +974,54 @@ function drawFix(fp) {
   ctx.fillStyle = '#ff4757'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('⚠️', fp.x, fp.y + 10);
 }
-function drawBean(x, y, color, img, scale = 1, emoji) {
-  ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
-  // yer gölgesi
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.beginPath(); ctx.ellipse(0, 42, 26, 9, 0, 0, 7); ctx.fill();
-  // gövde (fasulye)
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.ellipse(0, 12, 24, 30, 0, 0, 7);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 3; ctx.stroke();
+// ---- piksel sprite karakterler ----
+const SPR_W = 26, SPR_H = 36, SPR_SCALE = 3;
+const spriteCache = {};
+function beanSprite(skinIdx) {
+  if (spriteCache[skinIdx]) return spriteCache[skinIdx];
+  const s = SKINS[skinIdx] || SKINS[0];
+  const img = skinImgs[skinIdx];
+  const ready = !img || (img.complete && img.naturalWidth);
+  const cv = document.createElement('canvas');
+  cv.width = SPR_W; cv.height = SPR_H;
+  const c = cv.getContext('2d');
+  c.imageSmoothingEnabled = false;
   // sırt çantası
-  ctx.fillStyle = color;
-  ctx.fillRect(-32, 0, 10, 26);
-  // kafa: fotoğraf veya emoji
-  if (img && img.complete && img.naturalWidth) {
-    ctx.beginPath(); ctx.arc(0, -22, 24, 0, 7); ctx.closePath();
-    ctx.save(); ctx.clip();
-    ctx.drawImage(img, -24, -46, 48, 48);
-    ctx.restore();
-    ctx.beginPath(); ctx.arc(0, -22, 24, 0, 7);
-    ctx.strokeStyle = '#0b0e1a'; ctx.lineWidth = 3; ctx.stroke();
+  c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(1, 17, 5, 12);
+  c.fillStyle = s.color; c.fillRect(2, 18, 4, 10);
+  // gövde (fasulye)
+  c.fillStyle = s.color;
+  c.beginPath(); c.ellipse(15, 24, 9, 11, 0, 0, 7); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,0.55)'; c.lineWidth = 1.5; c.stroke();
+  // gövdeye parlaklık
+  c.fillStyle = 'rgba(255,255,255,0.22)'; c.fillRect(10, 18, 3, 8);
+  // kafa: pikselleşmiş fotoğraf veya vizörlü kask
+  if (img && ready) {
+    c.save(); c.beginPath(); c.arc(15, 10, 9, 0, 7); c.clip();
+    c.drawImage(img, 6, 1, 18, 18);
+    c.restore();
   } else {
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(0, -22, 22, 0, 7); ctx.fill(); ctx.stroke();
-    // vizör
-    ctx.fillStyle = '#9fd8e8';
-    ctx.beginPath(); ctx.ellipse(8, -24, 14, 9, 0, 0, 7); ctx.fill();
+    c.fillStyle = s.color;
+    c.beginPath(); c.arc(15, 10, 8.5, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.55)'; c.stroke();
+    c.fillStyle = '#bfefff'; c.fillRect(14, 7, 8, 5);
+    c.fillStyle = '#ffffff'; c.fillRect(19, 8, 2, 2);
   }
+  c.strokeStyle = '#0a0e28'; c.lineWidth = 1.5;
+  c.beginPath(); c.arc(15, 10, 9, 0, 7); c.stroke();
+  if (ready) spriteCache[skinIdx] = cv; // fotoğraf yüklenmediyse cache'leme
+  return cv;
+}
+function drawBean(x, y, skinIdx, rot = 0, scale = 1) {
+  ctx.save(); ctx.translate(x, y);
+  if (!rot) { // gölge dönmesin
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(0, 44 * scale, 27 * scale, 8 * scale, 0, 0, 7); ctx.fill();
+  }
+  if (rot) ctx.rotate(rot);
+  ctx.scale(scale, scale);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(beanSprite(skinIdx), -SPR_W * SPR_SCALE / 2, -SPR_H * SPR_SCALE / 2 - 6, SPR_W * SPR_SCALE, SPR_H * SPR_SCALE);
   ctx.restore();
 }
 function myDone(taskId) {
