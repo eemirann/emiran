@@ -1368,6 +1368,172 @@ function gameAsteroid(box, done) {
   box.append(info, area);
 }
 
+// ---------- BAĞLANTI TESTİ ----------
+const diagLines = [];
+function diagRow(icon, title, detail) {
+  diagLines.push(`${icon} ${title}${detail ? ' — ' + detail : ''}`);
+  const row = document.createElement('div');
+  row.className = 'diag-row';
+  row.innerHTML = `<span class="ic">${icon}</span><span class="tx"><b>${esc(title)}</b>${detail ? `<span>${esc(detail)}</span>` : ''}</span>`;
+  $('diag-list').appendChild(row);
+  return row;
+}
+function updRow(row, icon, title, detail) {
+  row.querySelector('.ic').textContent = icon;
+  row.querySelector('.tx').innerHTML = `<b>${esc(title)}</b>${detail ? `<span>${esc(detail)}</span>` : ''}`;
+  diagLines[diagLines.length - 1] = `${icon} ${title}${detail ? ' — ' + detail : ''}`;
+}
+
+// ICE aday toplama testi: STUN (srflx) veya TURN (relay) çalışıyor mu?
+function iceTest(servers, wantType, ms) {
+  return new Promise(resolve => {
+    let pc, done = false;
+    const finish = ok => {
+      if (done) return; done = true;
+      try { pc.close(); } catch (_) {}
+      resolve(ok);
+    };
+    try {
+      pc = new RTCPeerConnection({
+        iceServers: servers,
+        iceTransportPolicy: wantType === 'relay' ? 'relay' : 'all',
+      });
+    } catch (e) { return resolve(false); }
+    pc.onicecandidate = e => {
+      if (!e.candidate) return finish(false);          // toplama bitti, bulunamadı
+      if (e.candidate.candidate.includes(' typ ' + wantType)) finish(true);
+    };
+    pc.createDataChannel('t');
+    pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => finish(false));
+    setTimeout(() => finish(false), ms);
+  });
+}
+
+// PeerJS sunucusundan kimlik alabiliyor muyuz?
+function peerTest(ms) {
+  return new Promise(resolve => {
+    let p, done = false;
+    const finish = r => {
+      if (done) return; done = true;
+      try { p.destroy(); } catch (_) {}
+      resolve(r);
+    };
+    try { p = new Peer(PEER_CFG); } catch (e) { return resolve({ ok: false, err: 'kütüphane yüklenemedi' }); }
+    p.on('open', id => finish({ ok: true, id }));
+    p.on('error', e => finish({ ok: false, err: e.type }));
+    setTimeout(() => finish({ ok: false, err: 'zaman aşımı' }), ms);
+  });
+}
+
+// Uçtan uca: iki peer kurup aralarında veri gönder (gerçek oyun akışının provası)
+function loopbackTest(ms) {
+  return new Promise(resolve => {
+    let a, b, done = false;
+    const finish = r => {
+      if (done) return; done = true;
+      try { a.destroy(); } catch (_) {}
+      try { b.destroy(); } catch (_) {}
+      resolve(r);
+    };
+    const code = 'test-' + Math.random().toString(36).slice(2, 8);
+    try { a = new Peer('emiran-diag-' + code, PEER_CFG); b = new Peer(PEER_CFG); }
+    catch (e) { return resolve({ ok: false, err: 'peer kurulamadı' }); }
+    let aReady = false, bReady = false;
+    const tryConnect = () => {
+      if (!aReady || !bReady) return;
+      a.on('connection', c => c.on('data', d => { if (d === 'ping') c.send('pong'); }));
+      const c = b.connect('emiran-diag-' + code, { reliable: true });
+      c.on('open', () => c.send('ping'));
+      c.on('data', d => { if (d === 'pong') finish({ ok: true }); });
+      c.on('error', e => finish({ ok: false, err: e.type || 'veri kanalı hatası' }));
+    };
+    a.on('open', () => { aReady = true; tryConnect(); });
+    b.on('open', () => { bReady = true; tryConnect(); });
+    a.on('error', e => finish({ ok: false, err: e.type }));
+    b.on('error', e => finish({ ok: false, err: e.type }));
+    setTimeout(() => finish({ ok: false, err: 'zaman aşımı' }), ms);
+  });
+}
+
+async function runDiagnostics() {
+  diagLines.length = 0;
+  $('diag-list').innerHTML = '';
+  $('diag-verdict').innerHTML = '';
+  $('btn-diag').disabled = true;
+
+  const results = {};
+
+  // 1) Sayfa & güvenli bağlantı
+  const secure = location.protocol === 'https:' || location.hostname === 'localhost';
+  diagRow(secure ? '✅' : '❌', 'Sayfa (sürüm v4)',
+    secure ? location.host || 'yerel dosya' : 'https değil! WebRTC çalışmaz — adresi https ile aç');
+  results.secure = secure;
+
+  // 2) WebRTC desteği
+  const hasRTC = typeof RTCPeerConnection !== 'undefined';
+  diagRow(hasRTC ? '✅' : '❌', 'Tarayıcı WebRTC desteği',
+    hasRTC ? 'var' : 'yok — Chrome veya Safari ile aç');
+  results.rtc = hasRTC;
+
+  // 3) PeerJS kütüphanesi
+  const hasPeer = typeof Peer !== 'undefined';
+  diagRow(hasPeer ? '✅' : '❌', 'PeerJS kütüphanesi', hasPeer ? 'yüklendi' : 'yüklenemedi (lib/peerjs.min.js)');
+  results.lib = hasPeer;
+  if (!hasRTC || !hasPeer) { finishDiag(results); return; }
+
+  // 4) Sinyal sunucusu
+  let row = diagRow('⏳', 'Bağlantı sunucusu (PeerJS)', 'bağlanılıyor...');
+  const pr = await peerTest(15000);
+  results.signal = pr.ok;
+  updRow(row, pr.ok ? '✅' : '❌', 'Bağlantı sunucusu (PeerJS)',
+    pr.ok ? 'kimlik alındı' : 'ULAŞILAMIYOR (' + pr.err + ')');
+
+  // 5) STUN
+  row = diagRow('⏳', 'STUN (adres bulma)', 'test ediliyor...');
+  const stunOk = await iceTest(PEER_CFG.config.iceServers.filter(s => String(s.urls).startsWith('stun')), 'srflx', 9000);
+  results.stun = stunOk;
+  updRow(row, stunOk ? '✅' : '⚠️', 'STUN (adres bulma)', stunOk ? 'çalışıyor' : 'engelli');
+
+  // 6) TURN
+  row = diagRow('⏳', 'TURN (aktarıcı)', 'test ediliyor...');
+  const turnOk = await iceTest(PEER_CFG.config.iceServers.filter(s => String(s.urls).startsWith('turn')), 'relay', 12000);
+  results.turn = turnOk;
+  updRow(row, turnOk ? '✅' : '⚠️', 'TURN (aktarıcı)',
+    turnOk ? 'çalışıyor' : 'ulaşılamıyor — mobil veride bağlantı kurulamayabilir');
+
+  // 7) Uçtan uca
+  row = diagRow('⏳', 'Uçtan uca oda testi', 'iki oyuncu simüle ediliyor...');
+  const lb = results.signal ? await loopbackTest(25000) : { ok: false, err: 'sunucu yok' };
+  results.loop = lb.ok;
+  updRow(row, lb.ok ? '✅' : '❌', 'Uçtan uca oda testi',
+    lb.ok ? 'oda kurma + katılma ÇALIŞIYOR' : 'BAŞARISIZ (' + lb.err + ')');
+
+  finishDiag(results);
+}
+
+function finishDiag(r) {
+  let v;
+  if (!r.secure) v = '❌ Sayfa https ile açılmamış. Adres çubuğunda <b>https://</b> olduğundan emin ol.';
+  else if (!r.rtc || !r.lib) v = '❌ Tarayıcı sorunu. Chrome veya Safari ile, gizli olmayan normal sekmede aç.';
+  else if (!r.signal) v = '❌ <b>Bağlantı sunucusuna ulaşılamıyor.</b> Sebep ya internetin/operatörün bunu engelliyor ya da sunucu geçici olarak kapalı. Farklı bir ağ dene (mobil veri ↔ wifi) ve birkaç dakika sonra tekrar dene.';
+  else if (r.loop) v = '✅ <b>Her şey çalışıyor!</b> Oda kurup arkadaşını davet edebilirsin. Hâlâ giremiyorsan: kodu büyük harfle gir ve oda kuran kişinin sayfası açık kalsın.';
+  else if (!r.turn) v = '⚠️ Sunucuya ulaşılıyor ama <b>aktarıcı (TURN) engelli</b>. Aynı wifi\'daki cihazlar bağlanır, farklı mobil verilerde bağlanamayabilir. Herkesi aynı wifi\'ya alıp dene.';
+  else v = '⚠️ Sunucu ve aktarıcı çalışıyor ama <b>uçtan uca test başarısız</b>. Sayfayı yenileyip tekrar dene; sürerse ağın WebRTC veri kanallarını engelliyor olabilir.';
+  $('diag-verdict').innerHTML = v;
+  diagLines.push('SONUÇ: ' + v.replace(/<[^>]+>/g, ''));
+  $('btn-diag').disabled = false;
+}
+
+$('btn-diag').onclick = () => { $('diag-modal').classList.remove('hidden'); runDiagnostics(); };
+$('diag-close').onclick = () => $('diag-modal').classList.add('hidden');
+$('diag-copy').onclick = async () => {
+  const txt = 'ARAMIZDA bağlantı testi\n' + diagLines.join('\n');
+  try {
+    if (navigator.share) await navigator.share({ text: txt });
+    else { await navigator.clipboard.writeText(txt); $('diag-copy').textContent = '✅ Kopyalandı'; }
+  } catch (_) {}
+};
+
 // ---------- SES ----------
 let audioCtx = null;
 function playBeep(freq, dur) {

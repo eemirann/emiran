@@ -33,6 +33,16 @@ input:focus { border-color:#ff4757; }
 .or-sep::before, .or-sep::after { content:''; flex:1; height:1px; background:#2f3652; }
 
 .ver { color:#3d456b; font-size:11px; letter-spacing:1px; }
+.btn.diag { background:#1b2140; color:#8a92b8; border:1px solid #2f3652; }
+
+#diag-list { width:100%; display:flex; flex-direction:column; gap:8px; font-size:13px; }
+.diag-row { display:flex; gap:8px; align-items:flex-start; line-height:1.45; }
+.diag-row .ic { flex:none; width:20px; text-align:center; }
+.diag-row .tx b { display:block; color:#dfe4f5; }
+.diag-row .tx span { color:#8a92b8; }
+#diag-verdict { width:100%; font-size:14px; line-height:1.5; padding:12px;
+  border-radius:10px; background:#0b0e1a; color:#dfe4f5; }
+#diag-verdict:empty { display:none; }
 
 .skin-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
 .skin-opt { width:52px; height:52px; border-radius:50%; border:3px solid #2f3652;
