@@ -282,6 +282,22 @@ let killCd = 0, sabCd = 0, meetState = null, taskBarVal = 0;
 let sheriffUsed = false, reviveUsed = false, joy = { dx: 0, dy: 0 };
 let cam = { x: SPAWN.x, y: SPAWN.y }, lastT = 0, openTask = null;
 
+// PeerJS/WebRTC ayarı: STUN + ücretsiz TURN aktarıcıları.
+// TURN olmadan farklı mobil operatörlerdeki telefonlar (CGNAT) birbirine bağlanamaz.
+const PEER_CFG = {
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    ],
+    sdpSemantics: 'unified-plan',
+  },
+};
+
 const rnd = n => Math.floor(Math.random() * n);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const CODE_CHARS = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
@@ -319,40 +335,85 @@ $('inp-name').value = localStorage.getItem('aramizda-name') || '';
 const urlCode = new URLSearchParams(location.search).get('oda');
 if (urlCode) $('inp-code').value = urlCode.toUpperCase();
 
+const ERR_TR = {
+  'peer-unavailable': 'Bu kodla açık oda bulunamadı. Kodu kontrol et — oda kuran kişi sayfayı kapatmış olabilir.',
+  'unavailable-id': 'Bu oda kodu kullanımda, yeniden deniyorum...',
+  'network': 'Sunucuya ulaşılamıyor. İnternetini kontrol edip tekrar dene.',
+  'server-error': 'Bağlantı sunucusu şu an cevap vermiyor, birazdan tekrar dene.',
+  'socket-error': 'Bağlantı koptu, tekrar dene.',
+  'browser-incompatible': 'Bu tarayıcı desteklemiyor — Chrome veya Safari ile aç.',
+  'ssl-unavailable': 'Güvenli bağlantı kurulamadı (https ile açtığından emin ol).',
+};
+const errMsg = t => ERR_TR[t] || ('Bağlantı hatası: ' + t);
+
+let createTries = 0;
 $('btn-create').onclick = () => {
   getName();
+  createTries = 0;
+  $('btn-create').disabled = true;
+  createRoom();
+};
+function createRoom() {
   roomCode = makeCode();
   status('Oda kuruluyor...');
-  peer = new Peer(peerId(roomCode));
+  if (peer) { try { peer.destroy(); } catch (_) {} }
+  peer = new Peer(peerId(roomCode), PEER_CFG);
+  const failTimer = setTimeout(() => {
+    if (phase === 'home') {
+      status('Sunucuya ulaşılamadı. İnternetini kontrol edip tekrar dene.');
+      $('btn-create').disabled = false;
+    }
+  }, 15000);
   peer.on('open', () => {
+    clearTimeout(failTimer);
     isHost = true; myId = 'P0';
     players = { P0: newPlayer('P0', myName, mySkin) };
     peer.on('connection', onHostConnection);
     enterLobby();
   });
-  peer.on('error', e => status('Hata: ' + e.type + ' — tekrar dene'));
-};
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id' && ++createTries < 4) { createRoom(); return; }
+    clearTimeout(failTimer);
+    status(errMsg(e.type));
+    $('btn-create').disabled = false;
+  });
+}
 
 $('btn-join').onclick = () => {
   getName();
   const code = $('inp-code').value.trim().toUpperCase();
-  if (code.length !== 5) return status('5 haneli oda kodunu gir');
+  if (code.length !== 5) return status('5 haneli oda kodunu gir (örn. AB12X)');
   roomCode = code;
-  status('Odaya bağlanılıyor...');
-  peer = new Peer();
+  $('btn-join').disabled = true;
+  status('Sunucuya bağlanılıyor...');
+  if (peer) { try { peer.destroy(); } catch (_) {} }
+  peer = new Peer(PEER_CFG);
+  const giveUp = setTimeout(() => {
+    if (phase === 'home') {
+      status('Odaya bağlanılamadı. Oda kuran kişinin sayfası açık mı? Kodu kontrol et.');
+      $('btn-join').disabled = false;
+    }
+  }, 25000);
   peer.on('open', () => {
+    status('Oda aranıyor: ' + code + ' ...');
     const c = peer.connect(peerId(code), { reliable: true });
     c.on('open', () => {
+      clearTimeout(giveUp);
+      status('Bağlandı! Lobiye giriliyor...');
       conns = [c];
       c.send({ t: 'hello', name: myName, skin: mySkin });
-      c.on('data', d => onClientData(d));
       c.on('close', () => { alert('Host ile bağlantı koptu.'); location.reload(); });
     });
-    setTimeout(() => { if (phase === 'home') status('Oda bulunamadı. Kodu kontrol et.'); }, 8000);
+    c.on('data', d => onClientData(d));
+    c.on('error', e => status(errMsg(e.type || 'socket-error')));
   });
-  peer.on('error', e => status(e.type === 'peer-unavailable' ? 'Oda bulunamadı!' : 'Hata: ' + e.type));
+  peer.on('error', e => {
+    clearTimeout(giveUp);
+    status(errMsg(e.type));
+    $('btn-join').disabled = false;
+  });
 };
-const status = m => $('home-status').textContent = m;
+const status = m => { $('home-status').textContent = m; };
 
 function newPlayer(id, name, skin) {
   return { id, name, skin, x: SPAWN.x + rnd(200) - 100, y: SPAWN.y + rnd(120) - 60,
