@@ -1,3 +1,50 @@
+# 🏍️ PİXEL MOTOR — Emiran Edition
+
+**[`moto/`](moto/) klasöründe** — 2D, mobil, retro piksel akrobasi motor oyunu.
+Yatay ekranda oynanır, sonsuz prosedürel arazi, her akrobasi puan kazandırır.
+
+| Kontrol | Mobil | Klavye |
+|---|---|---|
+| Gaz | Sağ alt **GAZ** | ↑ / W |
+| Fren | Sağ alt **FREN** | ↓ / S |
+| Geri yatır (backflip) | Sol alt **◀** | ← / A |
+| İleri yatır (frontflip) | Sol alt **▶** | → / D |
+| Yeniden başla | — | R |
+
+Gaz ve yatırma **aynı anda** basılabilir (çoklu dokunma).
+
+### Puanlama
+
+Havada kazanılan puanlar bir **kombo havuzunda** birikir ve her akrobaside
+çarpan büyür. **Temiz iniş** havuzu bankaya yazar, **kaza** havuzu yakar —
+banka skoru korunur. Risk/ödül dengesi buradan doğar.
+
+| Akrobasi | Puan |
+|---|---|
+| Backflip | 1000 (double ×2, triple ×3…) |
+| Frontflip | 1500 |
+| Hava süresi | 150/sn |
+| Büyük hava (120 px+) | +500 |
+| Wheelie / Stoppie | 100 / 200 per sn |
+| Mükemmel iniş (±10°) | Kombo ×1.5 |
+
+Kaza edince skor sıfırlanmaz; son kontrol noktasından devam edilir. Rekor
+tarayıcıda saklanır. Aynı yerde üst üste kaza olursa oyun seni engelin
+ötesine taşır — takılıp kalmak yok.
+
+### Teknik
+
+Saf HTML/CSS/JS + Canvas, build yok. Fizik: Verlet parçacık + kısıt gevşetme
+(2 tekerlek + kadro + sürücü), 240 Hz sabit adım. Çizim, ekrana **tam sayı**
+oranda büyütülen düşük çözünürlüklü bir tampona yapılır — piksel kırılmaları
+bu yüzden keskin. Kaynak dosyalar `moto/src/` altında modüllere ayrılmıştır
+(`core`, `input`, `terrain`, `bike`, `ragdoll`, `tricks`, `fx`, `render`, `main`).
+
+> Sıradaki aşamalar: kasa açılımı, motor/sürücü renk ve skin değişimi,
+> skorboard, ses efektleri.
+
+---
+
 # 🔪 ARAMIZDA — Emiran Edition
 
 Web tabanlı, mobil uyumlu, Among Us tarzı sosyal dedüksiyon oyunu.

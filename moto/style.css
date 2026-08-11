@@ -1,0 +1,219 @@
+/* ============================================================
+   PİXEL MOTOR — arayüz
+   Tam ekran canvas + üstünde dokunmatik pedallar ve HUD.
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #12121a;
+  color: #f4f4ef;
+  font-family: "Courier New", Courier, monospace;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+/* Canvas'ın arka belleği tam kat ölçeklenir (render.js), bu yüzden boyutu
+   JS veriyor — burada yalnızca ortalanır. */
+#view {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* CRT tarama çizgisi — çok hafif, yoksa piksel sanatı çamurlaşır */
+#scanlines {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.055) 0px,
+    rgba(0,0,0,0.055) 2px,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,0) 4px
+  );
+  z-index: 5;
+}
+
+/* ---------- YATAY ZORUNLU ---------- */
+#rotate {
+  position: fixed; inset: 0;
+  display: none;
+  align-items: center; justify-content: center;
+  background: #12121a;
+  z-index: 100;
+  text-align: center;
+}
+.rot-box { padding: 20px; }
+.rot-icon {
+  font-size: 54px;
+  display: block;
+  animation: tilt 1.6s ease-in-out infinite;
+}
+@keyframes tilt {
+  0%, 45%   { transform: rotate(0deg); }
+  70%, 100% { transform: rotate(-90deg); }
+}
+.rot-box h2 {
+  margin-top: 18px;
+  font-size: 17px; letter-spacing: 2px;
+  color: #ffcf3f;
+}
+.rot-box p { margin-top: 8px; font-size: 12px; opacity: 0.7; }
+
+/* Dikey tutulduğunda oyunu gizle, çevirme uyarısını göster */
+@media (orientation: portrait) {
+  #rotate { display: flex; }
+  #hud, #controls, #overlay, #keyhint, #scanlines { display: none !important; }
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 0; right: 0;
+  padding: 0 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 10;
+  text-shadow: 2px 2px 0 #12121a;
+}
+
+.hud-row { display: flex; align-items: baseline; gap: 6px; line-height: 1.15; }
+.hud-row .lbl { font-size: 10px; letter-spacing: 1px; opacity: 0.75; }
+.hud-row b { font-size: 22px; letter-spacing: 1px; }
+.hud-row.sm .lbl { font-size: 8px; }
+.hud-row.sm b { font-size: 12px; opacity: 0.9; }
+
+#hud-combo {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffcf3f;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity .12s, transform .12s;
+  text-align: right;
+}
+#hud-combo.on {
+  opacity: 1;
+  transform: scale(1);
+  animation: pulse .55s infinite;
+}
+@keyframes pulse {
+  0%, 100% { color: #ffcf3f; }
+  50%      { color: #fff6cc; }
+}
+
+/* ---------- OVERLAY ---------- */
+#overlay {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(18,18,26,0.5);
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+}
+#overlay.hidden { display: none; }
+
+/* Kaza ekranı: kutu yukarı kayar ve perde açılır ki oyuncu savrulan
+   sürücüyü görebilsin — asıl ödül o an. */
+#overlay.crash {
+  align-items: flex-start;
+  padding-top: 6vh;
+  background: rgba(18,18,26,0.22);
+}
+#overlay.crash .over-box { border-color: #e0453a; }
+#overlay.crash .over-box h1 { color: #e0453a; }
+
+.over-box {
+  padding: 18px 26px;
+  border: 3px solid #f4f4ef;
+  background: rgba(18,18,26,0.85);
+  box-shadow: 6px 6px 0 rgba(0,0,0,0.5);
+}
+.over-box h1 {
+  font-size: 28px; letter-spacing: 3px;
+  color: #ffcf3f;
+  text-shadow: 3px 3px 0 #12121a;
+}
+.over-box p { margin-top: 10px; font-size: 13px; letter-spacing: 1px; }
+.over-box .sm { font-size: 11px; opacity: 0.75; }
+
+/* ---------- KONTROLLER ---------- */
+#controls {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  padding: 0 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  z-index: 15;
+}
+
+.pad-group { display: flex; gap: 10px; }
+
+.pad {
+  width: 72px; height: 72px;
+  border: 3px solid rgba(244,244,239,0.85);
+  border-radius: 10px;
+  background: rgba(18,18,26,0.42);
+  color: #f4f4ef;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  touch-action: none;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.45);
+  transition: transform .05s, background .05s;
+}
+.pad.held {
+  background: rgba(244,244,239,0.75);
+  color: #12121a;
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.45);
+}
+.pad.gas {
+  width: 90px; height: 90px;
+  border-color: #7ee06a;
+  color: #cdf5c4;
+  font-size: 17px;
+}
+.pad.gas.held { background: #7ee06a; color: #12121a; }
+.pad.brake { border-color: #e0453a; color: #f6bdb8; font-size: 13px; }
+.pad.brake.held { background: #e0453a; color: #12121a; }
+
+#keyhint {
+  position: fixed;
+  bottom: 4px; left: 0; right: 0;
+  text-align: center;
+  font-size: 10px;
+  opacity: 0.35;
+  z-index: 12;
+  pointer-events: none;
+}
+
+/* Dokunmatik cihazda klavye ipucunu gizle, pedalları büyüt */
+@media (pointer: coarse) {
+  #keyhint { display: none; }
+}
+
+/* Dar ekranlarda pedallar küçülsün */
+@media (max-width: 380px) {
+  .pad { width: 62px; height: 62px; font-size: 13px; }
+  .pad.gas { width: 78px; height: 78px; }
+}
+
+/* Masaüstünde kontroller daha sönük dursun */
+@media (pointer: fine) {
+  #controls { opacity: 0.55; }
+}

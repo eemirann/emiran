@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#12121a">
+<meta name="screen-orientation" content="landscape">
+<meta name="x5-orientation" content="landscape">
+<title>Pixel Motor — Emiran Edition</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="view"></canvas>
+<div id="scanlines"></div>
+
+<!-- YATAY ÇEVİRME UYARISI -->
+<div id="rotate">
+  <div class="rot-box">
+    <div class="rot-icon">📱</div>
+    <h2>TELEFONU YAN ÇEVİR</h2>
+    <p>Pixel Motor yatay ekranda oynanır</p>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-left">
+    <div class="hud-row"><span class="lbl">SKOR</span><b id="hud-score">0</b></div>
+    <div class="hud-row sm"><span class="lbl">MESAFE</span><b id="hud-dist">0 m</b></div>
+    <div class="hud-row sm"><span class="lbl">REKOR</span><b id="hud-best">0</b></div>
+  </div>
+  <div id="hud-combo"></div>
+</div>
+
+<!-- BAŞLANGIÇ / KAZA EKRANI -->
+<div id="overlay" class="hidden">
+  <div class="over-box">
+    <h1 id="over-title">PİXEL MOTOR</h1>
+    <p id="over-text">Başlamak için GAZ'a bas</p>
+  </div>
+</div>
+
+<!-- KONTROLLER -->
+<div id="controls">
+  <div class="pad-group left">
+    <button id="btn-lean-back" class="pad" aria-label="Geri yatır">◀</button>
+    <button id="btn-lean-fwd" class="pad" aria-label="İleri yatır">▶</button>
+  </div>
+  <div class="pad-group right">
+    <button id="btn-brake" class="pad brake" aria-label="Fren">FREN</button>
+    <button id="btn-gas" class="pad gas" aria-label="Gaz">GAZ</button>
+  </div>
+</div>
+
+<p id="keyhint">↑ gaz · ↓ fren · ← → yatır · R yeniden</p>
+
+<script src="src/core.js"></script>
+<script src="src/input.js"></script>
+<script src="src/terrain.js"></script>
+<script src="src/bike.js"></script>
+<script src="src/ragdoll.js"></script>
+<script src="src/tricks.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/render.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>
